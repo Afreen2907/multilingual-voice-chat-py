@@ -107,6 +107,9 @@ def detect_language(text: str) -> str:
     Returns a language code key from LANGUAGES (e.g. 'en', 'es', 'fr').
     """
     for rule in DETECTION_RULES:
-        if rule["char_pattern"].search(text) or rule["word_pattern"].search(text):
+        if rule["char_pattern"].search(text):
+            return rule["lang"]
+        # Only apply word_pattern if it is non-empty (avoids empty regex matching everything)
+        if rule["word_pattern"].pattern and rule["word_pattern"].search(text):
             return rule["lang"]
     return "en"

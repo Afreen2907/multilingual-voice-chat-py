@@ -59,6 +59,20 @@ def get_languages():
     return jsonify(LANGUAGES)
 
 
+def _translate_to_english(text: str) -> str | None:
+    """Return an English translation of text using Claude, or None on failure."""
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=256,
+            system="Translate the following text to English. Reply with only the translation, nothing else.",
+            messages=[{"role": "user", "content": text}],
+        )
+        return response.content[0].text if response.content else None
+    except Exception:
+        return None
+
+
 @app.route("/chat", methods=["POST"])
 def chat():
     """
@@ -76,9 +90,11 @@ def chat():
 
     Response JSON:
     {
-      "reply":    "The AI's response text",
-      "lang":     "en",    ← detected language code
-      "langInfo": { "label": "EN", "flag": "🇬🇧", ... }
+      "reply":           "The AI's response text",
+      "lang":            "en",    ← detected language code
+      "langInfo":        { "label": "EN", "flag": "🇬🇧", ... },
+      "translation":     "English translation of reply (non-EN only)",
+      "userTranslation": "English translation of user message (non-EN only)"
     }
     """
     data = request.get_json(silent=True)
@@ -109,10 +125,25 @@ def chat():
     lang_code = detect_language(reply)
     lang_info = LANGUAGES.get(lang_code, LANGUAGES["en"])
 
+    # ── Translate non-English content to English ──
+    translation      = None
+    user_translation = None
+
+    if lang_code != "en":
+        translation = _translate_to_english(reply)
+
+    last_user_msg = next(
+        (m["content"] for m in reversed(messages) if m["role"] == "user"), None
+    )
+    if last_user_msg and detect_language(last_user_msg) != "en":
+        user_translation = _translate_to_english(last_user_msg)
+
     return jsonify({
-        "reply":    reply,
-        "lang":     lang_code,
-        "langInfo": lang_info,
+        "reply":           reply,
+        "lang":            lang_code,
+        "langInfo":        lang_info,
+        "translation":     translation,
+        "userTranslation": user_translation,
     })
 
 

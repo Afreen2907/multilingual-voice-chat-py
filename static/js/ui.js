@@ -64,11 +64,12 @@ const UI = (() => {
    * Add a message bubble to the chat window.
    * @param {'user'|'ai'} role
    * @param {string}      text
-   * @param {object}      langInfo  — { flag, label, ... } from /languages
-   * @param {Function}    [onPlay]  — callback for play button (AI only)
+   * @param {object}      langInfo    — { flag, label, ... } from /languages
+   * @param {Function}    [onPlay]    — callback for play button (AI only)
+   * @param {string}      [translation] — English translation shown below bubble
    * @returns {HTMLElement}
    */
-  function addBubble(role, text, langInfo, onPlay) {
+  function addBubble(role, text, langInfo, onPlay, translation) {
     // Remove empty state on first message
     el('empty-state')?.remove();
 
@@ -98,11 +99,34 @@ const UI = (() => {
     }
 
     div.appendChild(bubble);
+
+    if (translation) {
+      const transl = document.createElement('div');
+      transl.className   = 'translation';
+      transl.textContent = translation;
+      div.appendChild(transl);
+    }
+
     div.appendChild(meta);
     win.appendChild(div);
     win.scrollTop = win.scrollHeight;
 
     return div;
+  }
+
+  /**
+   * Append an English translation to an existing bubble element.
+   * Used to update a user bubble after the server responds.
+   */
+  function addTranslation(msgEl, translation) {
+    if (!translation || !msgEl) return;
+    const transl = document.createElement('div');
+    transl.className   = 'translation';
+    transl.textContent = translation;
+    const meta = msgEl.querySelector('.msg-meta');
+    msgEl.insertBefore(transl, meta);
+    const win = el('chat-window');
+    win.scrollTop = win.scrollHeight;
   }
 
   function setPlayBtnState(pb, isPlaying) {
@@ -120,6 +144,7 @@ const UI = (() => {
     getVoiceSpeed,
     getAutoSpeak,
     addBubble,
+    addTranslation,
     setPlayBtnState,
   };
 

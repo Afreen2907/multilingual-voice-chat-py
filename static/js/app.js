@@ -72,7 +72,7 @@ function startListening() {
     onStart: () => {
       UI.setMicRecording(true);
       UI.setTranscript('🔴 Listening — speak now…', 'listening');
-      UI.setStatus('', '🎙️ Recording');
+      UI.setStatus('', '🎤 Recording');
     },
     onInterim: (text) => {
       UI.setTranscript(text, 'active');
@@ -107,8 +107,8 @@ async function handleUserMessage(text) {
 
   // Add user message to history and show bubble
   conversationHistory.push({ role: 'user', content: text });
-  const userLangInfo = guessLangInfoFromText(text);
-  UI.addBubble('user', text, userLangInfo);
+  const userLangInfo  = guessLangInfoFromText(text);
+  const userBubbleEl  = UI.addBubble('user', text, userLangInfo);
 
   UI.setInputsDisabled(true);
   UI.setStatus('thinking', '⟳ Thinking…');
@@ -127,7 +127,7 @@ async function handleUserMessage(text) {
     }
 
     const data = await res.json();
-    // data = { reply, lang, langInfo }
+    // data = { reply, lang, langInfo, translation, userTranslation }
 
     conversationHistory.push({ role: 'assistant', content: data.reply });
 
@@ -136,9 +136,11 @@ async function handleUserMessage(text) {
       conversationHistory = conversationHistory.slice(-MAX_HISTORY);
     }
 
+    UI.addTranslation(userBubbleEl, data.userTranslation);
+
     const msgEl = UI.addBubble('ai', data.reply, data.langInfo, (playBtn) => {
       handlePlayButton(data.reply, data.langInfo, playBtn);
-    });
+    }, data.translation);
 
     UI.setTranscript('Tap the mic to speak again…');
     UI.setStatus('', 'ready');
@@ -189,10 +191,18 @@ function handlePlayButton(text, langInfo, playBtn) {
 // ── Utility: best-guess lang info before server responds ───────────────────
 // Used only for showing the user bubble immediately (before /chat returns).
 function guessLangInfoFromText(text) {
-  // Quick client-side guess so the user bubble shows a flag straight away
-  if (/[一-鿿㐀-䶿豈-﫿]/.test(text)) return languages['zh'] || fallbackLang();
-  if (/[àâæçéèêëîïôœùûüÿ]/i.test(text))                       return languages['fr'] || fallbackLang();
-  if (/[áéíóúüñ¿¡]/i.test(text))                               return languages['es'] || fallbackLang();
+  // Mirrors server-side detection: special chars first, then common words.
+  if (/[一-鿿㐀-䶿豈-﫿]/.test(text))
+    return languages['zh'] || fallbackLang();
+
+  if (/[àâæçéèêëîïôœùûüÿ]/i.test(text) ||
+      /\b(je|tu|il|elle|nous|vous|ils|elles|est|sont|avec|pour|dans|que|qui|pas|sur|une|les|des|mon|ton|son|bonjour|merci|oui|non|bonsoir|salut|comment|va)\b/i.test(text))
+    return languages['fr'] || fallbackLang();
+
+  if (/[áéíóúüñ¿¡]/i.test(text) ||
+      /\b(yo|ella|nosotros|ellos|con|para|hola|gracias|buenos|dias|buenas|estas|tengo|quiero)\b/i.test(text))
+    return languages['es'] || fallbackLang();
+
   return languages['en'] || fallbackLang();
 }
 
