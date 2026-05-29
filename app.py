@@ -32,11 +32,22 @@ app = Flask(__name__)
 
 # ── Anthropic client ───────────────────────────────────────────────────────
 api_key = os.getenv("ANTHROPIC_API_KEY")
-if not api_key or api_key.startswith("sk-ant-api03-your"):
+
+if not api_key or api_key.startswith("sk-ant-api03-" "your"):
     raise EnvironmentError(
         "\n\n  ❌  ANTHROPIC_API_KEY is not set.\n"
         "  Open .env and replace the placeholder with your real API key.\n"
         "  Get one at: https://console.anthropic.com\n"
+    )
+if not api_key.startswith("sk-ant-"):
+    raise EnvironmentError(
+        "\n\n  ❌  ANTHROPIC_API_KEY looks invalid (expected prefix 'sk-ant-...').\n"
+        "  Check that you copied the key correctly from https://console.anthropic.com\n"
+    )
+if len(api_key) < 40:
+    raise EnvironmentError(
+        f"\n\n  ❌  ANTHROPIC_API_KEY is too short ({len(api_key)} chars; expected ≥40).\n"
+        "  The key may have been truncated when copying — check your .env file.\n"
     )
 
 client = Anthropic(api_key=api_key)
